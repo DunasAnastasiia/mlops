@@ -1,0 +1,52 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/prepare.py --input data/raw/weatherAUS.csv --output-dir 
+      data/processed
+    deps:
+    - path: data/raw/weatherAUS.csv
+      hash: md5
+      md5: a65cf8b8719b1a65db4f361eeec18457
+      size: 14094055
+    - path: src/prepare.py
+      hash: md5
+      md5: 76f550c31d2168950d2bbf2de0458b1c
+      size: 3159
+    params:
+      params.yaml:
+        prepare.random_state: 42
+        prepare.test_size: 0.3
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: 7684a4003ce52916f43b8c4166400075.dir
+      size: 59361593
+      nfiles: 4
+  train:
+    cmd: python src/train.py --input-dir data/processed --model-path 
+      models/model.pkl --metrics-path metrics.json
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 7684a4003ce52916f43b8c4166400075.dir
+      size: 59361593
+      nfiles: 4
+    - path: src/train.py
+      hash: md5
+      md5: 509f65bdf79c6eba4f63ff17ed336254
+      size: 4328
+    params:
+      params.yaml:
+        train.max_depth: 20
+        train.min_samples_split: 2
+        train.model_type: random_forest
+        train.n_estimators: 200
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 2186c2becec730349eee37a98c754362
+      size: 176
+    - path: models/model.pkl
+      hash: md5
+      md5: c39e63b89fe09c51fccd444bbbedcc18
+      size: 265348489
