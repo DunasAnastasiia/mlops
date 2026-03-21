@@ -27,14 +27,14 @@ jobs:
           black --check src/ tests/ --line-length 120
       - name: Data Preparation
         run: |
+          python src/generate_dummy_data.py
           dvc repro prepare || python src/prepare.py
+          
       - name: Pre-train tests (Data Validation)
         run: |
           pytest tests/test_data_validation.py
       - name: Train model
         run: |
-          # Since the CSV is present, we try dvc repro train
-          # If dvc fails because of remote issues, we fall back to direct execution
           dvc repro train || python src/train.py model=random_forest
       - name: Post-train tests (Artifacts & Quality Gate)
         run: |
