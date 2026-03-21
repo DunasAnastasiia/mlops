@@ -64,19 +64,27 @@ def preprocess_data(df, target_column='RainTomorrow'):
     return X_scaled, y
 
 
+import sys
+from omegaconf import OmegaConf
+from hydra import compose, initialize
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input', type=str, default='data/raw/weatherAUS.csv')
-    parser.add_argument('--output-dir', type=str, default='data/processed')
-    args = parser.parse_args()
+    with initialize(config_path="../conf", version_base="1.2"):
+        overrides = sys.argv[1:]
+        cfg = compose(config_name="config", overrides=overrides)
+        
+        print(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
 
-    params = load_params()
-    test_size = params['test_size']
-    random_state = params['random_state']
+        test_size = cfg.prepare.test_size
+        random_state = cfg.prepare.random_state
 
-    print(f"Parameters: test_size={test_size}, random_state={random_state}")
+        print(f"Parameters: test_size={test_size}, random_state={random_state}")
 
-    df = load_data(args.input)
+        # Ми можемо додати аргументи для input/output через Hydra, але зараз використаємо дефолтні або з cfg
+        input_path = 'data/raw/weatherAUS.csv'
+        output_dir_path = 'data/processed'
+
+        df = load_data(input_path)
 
     X, y = preprocess_data(df)
 
@@ -90,7 +98,7 @@ def main():
     print(f"\nTrain set: {X_train.shape[0]} samples")
     print(f"Test set: {X_test.shape[0]} samples")
 
-    output_dir = Path(args.output_dir)
+    output_dir = Path(output_dir_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     X_train.to_csv(output_dir / 'train_features.csv', index=False)
@@ -98,7 +106,7 @@ def main():
     X_test.to_csv(output_dir / 'test_features.csv', index=False)
     y_test.to_csv(output_dir / 'test_target.csv', index=False, header=True)
 
-    print(f"\nProcessed data saved to {args.output_dir}/")
+    print(f"\nProcessed data saved to {output_dir_path}/")
 
 
 if __name__ == "__main__":

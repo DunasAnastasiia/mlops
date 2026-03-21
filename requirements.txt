@@ -6,3 +6,6 @@ seaborn
 mlflow
 jupyter
 dvc
+optuna
+hydra-core
+hydra-optuna-sweeper

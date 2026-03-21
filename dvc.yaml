@@ -1,29 +1,35 @@
 stages:
   prepare:
-    cmd: python src/prepare.py --input data/raw/weatherAUS.csv --output-dir data/processed
+    cmd: python src/prepare.py
     deps:
       - data/raw/weatherAUS.csv
       - src/prepare.py
-    params:
-      - prepare.test_size
-      - prepare.random_state
+      - conf/config.yaml
     outs:
       - data/processed:
           cache: true
 
   train:
-    cmd: python src/train.py --input-dir data/processed --model-path models/model.pkl --metrics-path metrics.json
+    cmd: python src/train.py model=random_forest
     deps:
       - data/processed
       - src/train.py
-    params:
-      - train.model_type
-      - train.n_estimators
-      - train.max_depth
-      - train.min_samples_split
+      - conf/config.yaml
+      - conf/model/random_forest.yaml
     outs:
       - models/model.pkl:
           cache: true
     metrics:
       - metrics.json:
           cache: false
+
+  optimize:
+    cmd: python src/train.py --hpo model=random_forest model_path=models/optimized_model.pkl
+    deps:
+      - data/processed
+      - src/train.py
+      - conf/config.yaml
+      - conf/model/random_forest.yaml
+    outs:
+      - models/optimized_model.pkl:
+          cache: true

@@ -1,24 +1,19 @@
-import argparse
 import warnings
 warnings.filterwarnings('ignore')
 import json
 from pathlib import Path
 
 import pandas as pd
-import numpy as np
-import yaml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import joblib
 import mlflow
 import mlflow.sklearn
-
-
-def load_params():
-    with open('params.yaml', 'r') as f:
-        params = yaml.safe_load(f)
-    return params['train']
+import sys
+from omegaconf import OmegaConf
+from hydra import compose, initialize
+import optuna
 
 
 def load_data(input_dir):
@@ -34,17 +29,17 @@ def load_data(input_dir):
     return X_train, y_train, X_test, y_test
 
 
-def train_model(X_train, y_train, model_type, **model_params):
+def train_model(X_train, y_train, model_type, random_state, **model_params):
     print(f"\nTraining {model_type} model...")
 
     if model_type == 'random_forest':
         model = RandomForestClassifier(
-            random_state=42,
+            random_state=random_state,
             **model_params
         )
     elif model_type == 'logistic_regression':
         model = LogisticRegression(
-            random_state=42,
+            random_state=random_state,
             max_iter=1000,
             **model_params
         )
@@ -79,55 +74,88 @@ def evaluate_model(model, X_test, y_test):
     return metrics
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input-dir', type=str, default='data/processed')
-    parser.add_argument('--model-path', type=str, default='models/model.pkl')
-    parser.add_argument('--metrics-path', type=str, default='metrics.json')
-    args = parser.parse_args()
-
-    params = load_params()
-    model_type = params['model_type']
-
-    print(f"Parameters: {params}")
-
-    X_train, y_train, X_test, y_test = load_data(args.input_dir)
-
-    model_params = {}
+def objective(trial, cfg, X_train, y_train, X_test, y_test):
+    model_type = cfg.model.name
+    model_params = dict(cfg.model.params)
+    
     if model_type == 'random_forest':
-        model_params['n_estimators'] = params.get('n_estimators', 100)
-        model_params['min_samples_split'] = params.get('min_samples_split', 2)
-        if params.get('max_depth') is not None:
-            model_params['max_depth'] = params['max_depth']
+        model_params['n_estimators'] = trial.suggest_int('n_estimators', 50, 200, step=50)
+        model_params['max_depth'] = trial.suggest_int('max_depth', 5, 20)
     elif model_type == 'logistic_regression':
-        model_params['C'] = params.get('C', 1.0)
-
-    mlflow.set_experiment("weather_prediction")
-
-    with mlflow.start_run():
-        mlflow.log_param("model_type", model_type)
-        for key, value in model_params.items():
-            mlflow.log_param(key, value)
-
-        model = train_model(X_train, y_train, model_type, **model_params)
-
+        model_params['C'] = trial.suggest_float('C', 0.01, 10.0, log=True)
+    
+    with mlflow.start_run(nested=True):
+        mlflow.log_params(model_params)
+        model = train_model(X_train, y_train, model_type, cfg.seed, **model_params)
         metrics = evaluate_model(model, X_test, y_test)
-
         for metric_name, value in metrics.items():
             mlflow.log_metric(metric_name, value)
+        return metrics.get('roc_auc', metrics['accuracy'])
 
-        Path(args.model_path).parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(model, args.model_path)
-        print(f"\nModel saved to {args.model_path}")
 
-        with open(args.metrics_path, 'w') as f:
-            json.dump(metrics, f, indent=2)
-        print(f"Metrics saved to {args.metrics_path}")
+def main():
+    with initialize(config_path="../conf", version_base="1.2"):
+        hpo_mode = "--hpo" in sys.argv
+        overrides = [arg for arg in sys.argv[1:] if arg != "--hpo"]
+        
+        cfg = compose(config_name="config", overrides=overrides)
+        
+        print(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
 
-        mlflow.sklearn.log_model(model, "model")
+        X_train, y_train, X_test, y_test = load_data(cfg.input_dir)
+        mlflow.set_experiment("weather_prediction_hpo")
+
+        if hpo_mode:
+            print("\nStarting Hyperparameter Optimization (Optuna)...")
+            with mlflow.start_run(run_name="Optuna_Study"):
+                study = optuna.create_study(direction="maximize")
+                study.optimize(lambda trial: objective(trial, cfg, X_train, y_train, X_test, y_test), n_trials=20)
+                
+                print(f"\nBest trial:")
+                print(f"  Value: {study.best_value:.4f}")
+                print(f"  Params: {study.best_params}")
+
+                mlflow.log_params(study.best_params)
+                mlflow.log_metric("best_roc_auc", study.best_value)
+
+                print("\nTraining final model with best parameters...")
+                best_params = dict(cfg.model.params)
+                best_params.update(study.best_params)
+                
+                model = train_model(X_train, y_train, cfg.model.name, cfg.seed, **best_params)
+                metrics = evaluate_model(model, X_test, y_test)
+                
+                for metric_name, value in metrics.items():
+                    mlflow.log_metric(f"final_{metric_name}", value)
+                
+                Path(cfg.model_path).parent.mkdir(parents=True, exist_ok=True)
+                joblib.dump(model, cfg.model_path)
+                model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel"); from mlflow.tracking import MlflowClient; MlflowClient().transition_model_version_stage(name="WeatherModel", version=model_info.registered_model_version, stage="Staging")
+        else:
+            model_type = cfg.model.name
+            model_params = OmegaConf.to_container(cfg.model.params, resolve=True)
+            random_state = cfg.seed
+
+            with mlflow.start_run():
+                mlflow.log_param("model_type", model_type)
+                mlflow.log_params(model_params)
+                mlflow.log_param("seed", random_state)
+
+                model = train_model(X_train, y_train, model_type, random_state, **model_params)
+                metrics = evaluate_model(model, X_test, y_test)
+
+                for metric_name, value in metrics.items():
+                    mlflow.log_metric(metric_name, value)
+
+                Path(cfg.model_path).parent.mkdir(parents=True, exist_ok=True)
+                joblib.dump(model, cfg.model_path)
+                
+                with open(cfg.metrics_path, 'w') as f:
+                    json.dump(metrics, f, indent=2)
+                
+                model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel"); from mlflow.tracking import MlflowClient; MlflowClient().transition_model_version_stage(name="WeatherModel", version=model_info.registered_model_version, stage="Staging")
 
         print("\nExperiment logged to MLflow successfully!")
-        print(f"Run ID: {mlflow.active_run().info.run_id}")
 
 
 if __name__ == "__main__":
