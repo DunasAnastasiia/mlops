@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-import pytest
 
 METRICS_PATH = Path("metrics.json")
 F1_THRESHOLD = 0.5
