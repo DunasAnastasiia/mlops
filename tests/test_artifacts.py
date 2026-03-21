@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 import joblib
-import pytest
 
 MODEL_PATH = Path("models/model.pkl")
 METRICS_PATH = Path("metrics.json")
