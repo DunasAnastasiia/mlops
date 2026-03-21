@@ -43,15 +43,15 @@ jobs:
       - name: Write CML report
         if: github.event_name == 'pull_request'
         env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "## Model Metrics" > report.md
           echo "\`\`\`json" >> report.md
           cat metrics.json >> report.md
           echo "\`\`\`" >> report.md
           echo "## Confusion Matrix" >> report.md
-          cml-publish confusion_matrix.png --md >> report.md
-          cml-send-comment report.md
+          cml publish confusion_matrix.png --md >> report.md
+          cml comment create report.md
       - name: Upload model artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
