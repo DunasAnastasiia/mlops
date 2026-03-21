@@ -1,0 +1,57 @@
+name: CML & Model Training
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+jobs:
+  train-and-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: iterative/setup-cml@v1
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Linting
+        run: |
+          flake8 src/ tests/ --ignore=E501,W503
+          black --check src/ tests/ --line-length 120
+      - name: Pre-train tests (Data Validation)
+        run: |
+          pytest tests/test_data_validation.py
+      - name: Train model
+        run: |
+          # Since the CSV is present, we try dvc repro
+          # If dvc fails because of remote issues, we fall back to direct execution
+          dvc repro || (python src/prepare.py && python src/train.py)
+      - name: Post-train tests (Artifacts & Quality Gate)
+        run: |
+          pytest tests/test_artifacts.py
+          pytest tests/test_quality_gate.py
+      - name: Write CML report
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## Model Metrics" > report.md
+          echo "\`\`\`json" >> report.md
+          cat metrics.json >> report.md
+          echo "\`\`\`" >> report.md
+          echo "## Confusion Matrix" >> report.md
+          cml-publish confusion_matrix.png --md >> report.md
+          cml-send-comment report.md
+      - name: Upload model artifact
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v3
+        with:
+          name: weather-model
+          path: models/model.pkl

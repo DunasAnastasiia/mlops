@@ -9,3 +9,7 @@ dvc
 optuna
 hydra-core
 hydra-optuna-sweeper
+pytest
+flake8
+black
+joblib
