@@ -1,6 +1,5 @@
 import warnings
 
-warnings.filterwarnings("ignore")
 import json
 from pathlib import Path
 
@@ -24,6 +23,9 @@ import sys
 from omegaconf import OmegaConf
 from hydra import compose, initialize
 import optuna
+from mlflow.tracking import MlflowClient
+
+warnings.filterwarnings("ignore")
 
 
 def load_data(input_dir):
@@ -122,7 +124,7 @@ def main():
                 study = optuna.create_study(direction="maximize")
                 study.optimize(lambda trial: objective(trial, cfg, X_train, y_train, X_test, y_test), n_trials=20)
 
-                print(f"\nBest trial:")
+                print("\nBest trial:")
                 print(f"  Value: {study.best_value:.4f}")
                 print(f"  Params: {study.best_params}")
 
@@ -142,7 +144,6 @@ def main():
                 Path(cfg.model_path).parent.mkdir(parents=True, exist_ok=True)
                 joblib.dump(model, cfg.model_path)
                 model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel")
-                from mlflow.tracking import MlflowClient
 
                 MlflowClient().transition_model_version_stage(
                     name="WeatherModel", version=model_info.registered_model_version, stage="Staging"
@@ -170,7 +171,6 @@ def main():
                     json.dump(metrics, f, indent=2)
 
                 model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel")
-                from mlflow.tracking import MlflowClient
 
                 MlflowClient().transition_model_version_stage(
                     name="WeatherModel", version=model_info.registered_model_version, stage="Staging"

@@ -1,7 +1,5 @@
 import warnings
 
-warnings.filterwarnings("ignore")
-
 import pandas as pd
 import numpy as np
 import yaml
@@ -12,6 +10,8 @@ from sklearn.impute import SimpleImputer
 import sys
 from omegaconf import OmegaConf
 from hydra import compose, initialize
+
+warnings.filterwarnings("ignore")
 
 
 def load_params():
