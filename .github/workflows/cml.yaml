@@ -25,9 +25,17 @@ jobs:
         run: |
           flake8 src/ tests/ --ignore=E501,W503
           black --check src/ tests/ --line-length 120
+      - name: Download Real Data
+        run: |
+          mkdir -p data/raw
+          curl -L https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv -o data/raw/weatherAUS.csv
+          if [ ! -s data/raw/weatherAUS.csv ] || [ $(stat -c%s data/raw/weatherAUS.csv) -lt 1000 ]; then
+            echo "Primary download failed, trying fallback source..."
+            curl -L https://raw.githubusercontent.com/sksharma001/ML-Project-Weather-Prediction-Using-Python/master/weatherAUS.csv -o data/raw/weatherAUS.csv
+          fi
+          
       - name: Data Preparation
         run: |
-          python src/generate_dummy_data.py
           dvc repro prepare || python src/prepare.py
           
       - name: Pre-train tests (Data Validation)
