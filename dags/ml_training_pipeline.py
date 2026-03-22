@@ -29,29 +29,31 @@ def run_dvc_command(command):
             __import__(mod)
         except ImportError:
             to_install.append(pkg)
-    
+
     if to_install:
         print(f"Required packages {to_install} not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + to_install + ["--user"])
         if site.getusersitepackages() not in sys.path:
             sys.path.append(site.getusersitepackages())
-    
+
     env = os.environ.copy()
     user_site = site.getusersitepackages()
     user_bin = os.path.join(os.path.expanduser("~"), ".local", "bin")
-    
+
     if user_bin not in env.get('PATH', ''):
         env['PATH'] = f"{user_bin}:{env.get('PATH', '')}"
     if user_site not in env.get('PYTHONPATH', ''):
         env['PYTHONPATH'] = f"{user_site}:{env.get('PYTHONPATH', '')}"
-    
+
     env['MLFLOW_TRACKING_URI'] = 'sqlite:////opt/airflow/mlflow.db'
 
     db_path = '/opt/airflow/mlflow.db'
     if os.path.isdir(db_path):
         import shutil
-        try: shutil.rmtree(db_path)
-        except Exception: pass
+        try:
+            shutil.rmtree(db_path)
+        except Exception:
+            pass
 
     env['MLFLOW_TRACKING_URI'] = 'sqlite:////opt/airflow/mlflow.db'
 
@@ -62,29 +64,37 @@ def run_dvc_command(command):
                 env=env, capture_output=True, text=True
             )
             if "alembic.util.exc.CommandError" in check_db.stderr or "ResolutionError" in check_db.stderr:
-                print(f"Detected incompatible MLflow database. Resetting for fresh start...")
+                print("Detected incompatible MLflow database. Resetting for fresh start...")
                 os.rename(db_path, f"{db_path}.bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         except Exception:
             pass
 
         if os.path.exists(db_path):
-            try: os.chmod(db_path, 0o666)
-            except Exception: pass
+            try:
+                os.chmod(db_path, 0o666)
+            except Exception:
+                pass
 
             for suffix in ['-journal', '-shm', '-wal']:
                 fpath = db_path + suffix
                 if os.path.exists(fpath):
-                    try: os.remove(fpath)
-                    except Exception: pass
+                    try:
+                        os.remove(fpath)
+                    except Exception:
+                        pass
 
     mlruns_dir = '/opt/airflow/mlruns'
     if not os.path.exists(mlruns_dir):
-        try: os.makedirs(mlruns_dir, mode=0o777, exist_ok=True)
-        except Exception: pass
+        try:
+            os.makedirs(mlruns_dir, mode=0o777, exist_ok=True)
+        except Exception:
+            pass
     else:
-        try: os.chmod(mlruns_dir, 0o777)
-        except Exception: pass
-    
+        try:
+            os.chmod(mlruns_dir, 0o777)
+        except Exception:
+            pass
+
     result = subprocess.run(
         [sys.executable, "-m", "dvc"] + command.split(),
         cwd='/opt/airflow',
@@ -122,10 +132,9 @@ def register_model_task():
     import subprocess
     import sys
     import site
+    import importlib.util
 
-    try:
-        import mlflow
-    except ImportError:
+    if importlib.util.find_spec("mlflow") is None:
         print("MLflow not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "mlflow", "scikit-learn", "--user"])
         if site.getusersitepackages() not in sys.path:
@@ -157,6 +166,7 @@ def register_model_task():
         version=result.version,
         stage="Staging"
     )
+
 
 default_args = {
     'owner': 'airflow',
