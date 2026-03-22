@@ -17,7 +17,7 @@ stages:
       - conf/config.yaml
       - conf/model/random_forest.yaml
     outs:
-      - models/model.pkl:
+      - model.pkl:
           cache: true
     metrics:
       - metrics.json:
@@ -27,12 +27,12 @@ stages:
           cache: false
 
   optimize:
-    cmd: python src/train.py --hpo model=random_forest model_path=models/optimized_model.pkl
+    cmd: python src/train.py --hpo model=random_forest model_path=optimized_model.pkl
     deps:
       - data/processed
       - src/train.py
       - conf/config.yaml
       - conf/model/random_forest.yaml
     outs:
-      - models/optimized_model.pkl:
+      - optimized_model.pkl:
           cache: true
