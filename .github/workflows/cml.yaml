@@ -25,10 +25,6 @@ jobs:
         run: |
           flake8 src/ tests/ --ignore=E501,W503
           black --check src/ tests/ --line-length 120
-      - name: Download Real Data
-        run: |
-          mkdir -p data/raw
-          python -c "import pandas as pd; url='https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv'; df=pd.read_csv(url); df.to_csv('data/raw/weatherAUS.csv', index=False); print('Success: Data downloaded via Python')"
           
       - name: Data Preparation
         run: |

@@ -12,12 +12,6 @@ warnings.filterwarnings("ignore")
 
 
 def load_data(data_path):
-    if not Path(data_path).exists():
-        url = "https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv"
-        df = pd.read_csv(url)
-        Path(data_path).parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(data_path, index=False)
-        return df
     return pd.read_csv(data_path)
 
 
