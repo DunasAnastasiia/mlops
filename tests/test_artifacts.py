@@ -20,7 +20,7 @@ def test_model_loadable():
 
 
 def test_metrics_structure():
-    with open(METRICS_PATH, "r") as f:
+    with open(METRICS_PATH, "r", encoding="utf-8") as f:
         metrics = json.load(f)
 
     expected_metrics = ["accuracy", "precision", "recall", "f1_score"]

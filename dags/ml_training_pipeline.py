@@ -1,13 +1,13 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
 
-def run_dvc_command(command):
+
+def install_dependencies():
     import subprocess
     import sys
-    import os
     import site
 
     pkgs = {
@@ -36,6 +36,11 @@ def run_dvc_command(command):
         if site.getusersitepackages() not in sys.path:
             sys.path.append(site.getusersitepackages())
 
+
+def get_base_env():
+    import os
+    import site
+
     env = os.environ.copy()
     user_site = site.getusersitepackages()
     user_bin = os.path.join(os.path.expanduser("~"), ".local", "bin")
@@ -46,76 +51,96 @@ def run_dvc_command(command):
         env["PYTHONPATH"] = f"{user_site}:{env.get('PYTHONPATH', '')}"
 
     env["MLFLOW_TRACKING_URI"] = "sqlite:////opt/airflow/mlflow.db"
+    return env
 
-    db_path = "/opt/airflow/mlflow.db"
+
+def reset_mlflow_db(db_path, env):
+    import os
+    import subprocess
+    import sys
+
+    try:
+        check_cmd = [
+            sys.executable,
+            "-c",
+            f"import mlflow; mlflow.set_tracking_uri('sqlite:////{db_path}'); mlflow.search_experiments()",
+        ]
+        check_db = subprocess.run(check_cmd, env=env, capture_output=True, text=True, check=False)
+        if "alembic.util.exc.CommandError" in check_db.stderr or "ResolutionError" in check_db.stderr:
+            print("Detected incompatible MLflow database. Resetting for fresh start...")
+            os.rename(db_path, f"{db_path}.bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    except OSError:
+        pass
+
+
+def prepare_mlflow_db(db_path):
+    import os
+
     if os.path.isdir(db_path):
         import shutil
 
         try:
             shutil.rmtree(db_path)
-        except Exception:
+        except OSError:
             pass
-
-    env["MLFLOW_TRACKING_URI"] = "sqlite:////opt/airflow/mlflow.db"
 
     if os.path.exists(db_path):
         try:
-            check_db = subprocess.run(
-                [
-                    sys.executable,
-                    "-c",
-                    f"import mlflow; mlflow.set_tracking_uri('sqlite:////{db_path}'); mlflow.search_experiments()",
-                ],
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            if "alembic.util.exc.CommandError" in check_db.stderr or "ResolutionError" in check_db.stderr:
-                print("Detected incompatible MLflow database. Resetting for fresh start...")
-                os.rename(db_path, f"{db_path}.bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-        except Exception:
+            os.chmod(db_path, 0o666)
+        except OSError:
             pass
 
-        if os.path.exists(db_path):
-            try:
-                os.chmod(db_path, 0o666)
-            except Exception:
-                pass
+        for suffix in ["-journal", "-shm", "-wal"]:
+            fpath = db_path + suffix
+            if os.path.exists(fpath):
+                try:
+                    os.remove(fpath)
+                except OSError:
+                    pass
 
-            for suffix in ["-journal", "-shm", "-wal"]:
-                fpath = db_path + suffix
-                if os.path.exists(fpath):
-                    try:
-                        os.remove(fpath)
-                    except Exception:
-                        pass
 
-    mlruns_dir = "/opt/airflow/mlruns"
+def prepare_mlruns(mlruns_dir):
+    import os
+
     if not os.path.exists(mlruns_dir):
         try:
             os.makedirs(mlruns_dir, mode=0o777, exist_ok=True)
-        except Exception:
+        except OSError:
             pass
     else:
         try:
             os.chmod(mlruns_dir, 0o777)
-        except Exception:
+        except OSError:
             pass
 
-    result = subprocess.run(
-        [sys.executable, "-m", "dvc"] + command.split(), cwd="/opt/airflow", env=env, capture_output=True, text=True
-    )
+
+def run_dvc_command(command):
+    import subprocess
+    import sys
+
+    install_dependencies()
+    env = get_base_env()
+    db_path = "/opt/airflow/mlflow.db"
+    mlruns_dir = "/opt/airflow/mlruns"
+
+    prepare_mlflow_db(db_path)
+    reset_mlflow_db(db_path, env)
+    prepare_mlruns(mlruns_dir)
+
+    cmd = [sys.executable, "-m", "dvc"] + command.split()
+    result = subprocess.run(cmd, cwd="/opt/airflow", env=env, capture_output=True, text=True, check=False)
     print(result.stdout)
     if result.returncode != 0:
         print(result.stderr)
-        raise Exception(f"DVC command '{command}' failed with code {result.returncode}")
+        msg = f"DVC command '{command}' failed with code {result.returncode}"
+        raise RuntimeError(msg)
 
 
 def check_data_exists():
     import os
 
     if not os.path.exists("/opt/airflow/data/raw/weatherAUS.csv"):
-        raise Exception("Data file not found")
+        raise RuntimeError("Data file not found")
     print("Data exists")
 
 
@@ -123,17 +148,17 @@ def check_model_performance():
     import json
 
     try:
-        with open("/opt/airflow/metrics.json", "r") as f:
+        with open("/opt/airflow/metrics.json", "r", encoding="utf-8") as f:
             metrics = json.load(f)
         roc_auc = metrics.get("roc_auc", 0)
         if roc_auc >= 0.80:
             return "register_model"
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         pass
     return "stop_pipeline"
 
 
-def register_model_task():
+def ensure_mlflow_installed():
     import subprocess
     import sys
     import site
@@ -145,24 +170,33 @@ def register_model_task():
         if site.getusersitepackages() not in sys.path:
             sys.path.append(site.getusersitepackages())
 
-    import mlflow
-    from mlflow.tracking import MlflowClient
 
-    mlflow_db = "sqlite:////opt/airflow/mlflow.db"
-    client = MlflowClient(tracking_uri=mlflow_db)
-    experiment = client.get_experiment_by_name("weather_prediction_hpo")
+def get_best_run_id(client, experiment_name):
+    experiment = client.get_experiment_by_name(experiment_name)
     if not experiment:
-        return
+        return None
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id], order_by=["metrics.roc_auc DESC"], max_results=1
     )
     if not runs:
-        return
-    run_id = runs[0].info.run_id
-    model_name = "WeatherModel"
-    mlflow.set_tracking_uri(mlflow_db)
-    result = mlflow.register_model(f"runs:/{run_id}/model", model_name)
-    client.transition_model_version_stage(name=model_name, version=result.version, stage="Staging")
+        return None
+    return runs[0].info.run_id
+
+
+def register_model_task():
+    import mlflow
+    from mlflow.tracking import MlflowClient
+
+    ensure_mlflow_installed()
+    mlflow_db = "sqlite:////opt/airflow/mlflow.db"
+    client = MlflowClient(tracking_uri=mlflow_db)
+    run_id = get_best_run_id(client, "weather_prediction_hpo")
+
+    if run_id:
+        model_name = "WeatherModel"
+        mlflow.set_tracking_uri(mlflow_db)
+        result = mlflow.register_model(f"runs:/{run_id}/model", model_name)
+        client.transition_model_version_stage(name=model_name, version=result.version, stage="Staging")
 
 
 default_args = {
@@ -214,5 +248,7 @@ with DAG(
         bash_command='echo "Model performance below threshold."',
     )
 
-    sensor_task >> prepare_task >> train_task >> evaluate_task
-    evaluate_task >> [register_model, stop_pipeline]
+    sensor_task.set_downstream(prepare_task)
+    prepare_task.set_downstream(train_task)
+    train_task.set_downstream(evaluate_task)
+    evaluate_task.set_downstream([register_model, stop_pipeline])
