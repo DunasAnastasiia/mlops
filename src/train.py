@@ -143,11 +143,7 @@ def main():
 
                 Path(cfg.model_path).parent.mkdir(parents=True, exist_ok=True)
                 joblib.dump(model, cfg.model_path)
-                model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel")
-
-                MlflowClient().transition_model_version_stage(
-                    name="WeatherModel", version=model_info.registered_model_version, stage="Staging"
-                )
+                mlflow.sklearn.log_model(model, "model")
         else:
             model_type = cfg.model.name
             model_params = OmegaConf.to_container(cfg.model.params, resolve=True)
@@ -170,11 +166,7 @@ def main():
                 with open(cfg.metrics_path, "w") as f:
                     json.dump(metrics, f, indent=2)
 
-                model_info = mlflow.sklearn.log_model(model, "model", registered_model_name="WeatherModel")
-
-                MlflowClient().transition_model_version_stage(
-                    name="WeatherModel", version=model_info.registered_model_version, stage="Staging"
-                )
+                mlflow.sklearn.log_model(model, "model")
 
         print("\nExperiment logged to MLflow successfully!")
 
