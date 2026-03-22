@@ -23,7 +23,6 @@ import sys
 from omegaconf import OmegaConf
 from hydra import compose, initialize
 import optuna
-from mlflow.tracking import MlflowClient
 
 warnings.filterwarnings("ignore")
 
