@@ -5,16 +5,16 @@ stages:
     deps:
     - path: conf/config.yaml
       hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
     - path: data/raw/weatherAUS.csv
       hash: md5
       md5: a65cf8b8719b1a65db4f361eeec18457
       size: 14094055
     - path: src/prepare.py
       hash: md5
-      md5: c5e5479c684a0f40b5685dc586f46049
-      size: 3471
+      md5: 3d7e901a223085ffeedcb3de6ccffacf
+      size: 2847
     outs:
     - path: data/processed
       hash: md5
@@ -26,8 +26,8 @@ stages:
     deps:
     - path: conf/config.yaml
       hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
     - path: conf/model/random_forest.yaml
       hash: md5
       md5: f4353742c30e67a84efbb779a5e443c8
@@ -39,8 +39,8 @@ stages:
       nfiles: 4
     - path: src/train.py
       hash: md5
-      md5: 6ae294ebe6175782f9bf49b55a9593e7
-      size: 7077
+      md5: 12077710cc0a6730e10726a0c54f72d7
+      size: 6351
     outs:
     - path: confusion_matrix.png
       hash: md5
@@ -50,18 +50,18 @@ stages:
       hash: md5
       md5: a25bc5112a80b362c4c564a47ee78508
       size: 176
-    - path: models/model.pkl
+    - path: model.pkl
       hash: md5
       md5: fbe0e7637310ad162fbe088de48ed9cb
       size: 11959849
   optimize:
     cmd: python src/train.py --hpo model=random_forest 
-      model_path=models/optimized_model.pkl
+      model_path=optimized_model.pkl
     deps:
     - path: conf/config.yaml
       hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
     - path: conf/model/random_forest.yaml
       hash: md5
       md5: f4353742c30e67a84efbb779a5e443c8
@@ -73,10 +73,10 @@ stages:
       nfiles: 4
     - path: src/train.py
       hash: md5
-      md5: 6ae294ebe6175782f9bf49b55a9593e7
-      size: 7077
+      md5: 12077710cc0a6730e10726a0c54f72d7
+      size: 6351
     outs:
-    - path: models/optimized_model.pkl
+    - path: optimized_model.pkl
       hash: md5
       md5: 2b93091184cfa5fa13e56d695b2bccfc
       size: 199370089

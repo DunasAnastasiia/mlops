@@ -10,8 +10,9 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    MLFLOW_TRACKING_URI: sqlite:///opt/airflow/mlflow.db
-    _PIP_ADDITIONAL_DEPENDENCIES: "pandas numpy scikit-learn mlflow dvc[all] hydra-core hydra-optuna-sweeper optuna joblib"
+    MLFLOW_TRACKING_URI: sqlite:////opt/airflow/mlflow.db
+    PYTHONPATH: /opt/airflow:/home/airflow/.local/lib/python3.8/site-packages:/opt/airflow/src
+    _PIP_ADDITIONAL_DEPENDENCIES: "dvc[all] mlflow pandas numpy scikit-learn matplotlib seaborn optuna hydra-core hydra-optuna-sweeper joblib psycopg2-binary"
   volumes:
     - .:/opt/airflow
   user: "${AIRFLOW_UID:-50000}:0"

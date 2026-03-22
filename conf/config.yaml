@@ -4,7 +4,7 @@ defaults:
   - override hydra/sweeper: optuna
 
 input_dir: data/processed
-model_path: models/model.pkl
+model_path: model.pkl
 metrics_path: metrics.json
 
 seed: 42

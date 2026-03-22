@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 import joblib
 
-MODEL_PATH = Path("models/model.pkl")
+MODEL_PATH = Path("model.pkl")
 METRICS_PATH = Path("metrics.json")
 CM_PATH = Path("confusion_matrix.png")
 
@@ -20,7 +20,7 @@ def test_model_loadable():
 
 
 def test_metrics_structure():
-    with open(METRICS_PATH, "r") as f:
+    with open(METRICS_PATH, "r", encoding="utf-8") as f:
         metrics = json.load(f)
 
     expected_metrics = ["accuracy", "precision", "recall", "f1_score"]

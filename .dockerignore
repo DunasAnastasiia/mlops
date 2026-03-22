@@ -37,6 +37,8 @@ data/
 models/
 mlruns/
 mlflow.db
+model.pkl
+optimized_model.pkl
 confusion_matrix.png
 metrics.json
 .idea/
