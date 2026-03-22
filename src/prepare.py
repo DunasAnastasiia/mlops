@@ -10,6 +10,7 @@ from hydra import compose, initialize
 
 warnings.filterwarnings("ignore")
 
+
 def load_data(data_path):
     if not Path(data_path).exists():
         url = "https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv"
@@ -18,6 +19,7 @@ def load_data(data_path):
         df.to_csv(data_path, index=False)
         return df
     return pd.read_csv(data_path)
+
 
 def preprocess_data(df, target_column="RainTomorrow"):
     if df.empty:
@@ -48,6 +50,7 @@ def preprocess_data(df, target_column="RainTomorrow"):
     X_scaled = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
     return X_scaled, y
 
+
 def main():
     with initialize(config_path="../conf", version_base="1.2"):
         overrides = sys.argv[1:]
@@ -67,6 +70,7 @@ def main():
     y_train.to_csv(output_dir / "train_target.csv", index=False, header=True)
     X_test.to_csv(output_dir / "test_features.csv", index=False)
     y_test.to_csv(output_dir / "test_target.csv", index=False, header=True)
+
 
 if __name__ == "__main__":
     main()
