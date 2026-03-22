@@ -2,5 +2,5 @@ from airflow.models import DagBag
 
 
 def test_dag_bag_import_errors():
-    dag_bag = DagBag(dag_folder='dags', include_examples=False)
+    dag_bag = DagBag(dag_folder="dags", include_examples=False)
     assert len(dag_bag.import_errors) == 0, f"DAG import errors: {dag_bag.import_errors}"
