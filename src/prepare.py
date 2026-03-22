@@ -39,7 +39,7 @@ def preprocess_data(df, target_column="RainTomorrow"):
     data = df.copy()
 
     data = data.dropna(subset=[target_column])
-    
+
     if data.empty:
         raise ValueError("Dataset is empty after dropping missing target values")
 
