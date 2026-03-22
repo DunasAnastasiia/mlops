@@ -5,63 +5,29 @@ stages:
     deps:
     - path: conf/config.yaml
       hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
     - path: data/raw/weatherAUS.csv
       hash: md5
       md5: a65cf8b8719b1a65db4f361eeec18457
       size: 14094055
     - path: src/prepare.py
       hash: md5
-      md5: ebe3beae609ac666a61cb0b8f3d6f20b
-      size: 2745
+      md5: 3d7e901a223085ffeedcb3de6ccffacf
+      size: 2847
     outs:
     - path: data/processed
       hash: md5
-      md5: deb47b3ef224697b4f7030f622601e48.dir
-      size: 59040655
+      md5: 7684a4003ce52916f43b8c4166400075.dir
+      size: 59361593
       nfiles: 4
   train:
     cmd: python src/train.py model=random_forest
     deps:
     - path: conf/config.yaml
       hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
-    - path: conf/model/random_forest.yaml
-      hash: md5
-      md5: f4353742c30e67a84efbb779a5e443c8
-      size: 92
-    - path: data/processed
-      hash: md5
-      md5: deb47b3ef224697b4f7030f622601e48.dir
-      size: 59040655
-      nfiles: 4
-    - path: src/train.py
-      hash: md5
-      md5: 46c846ed65dce8dcdae1afee6a50f468
-      size: 6442
-    outs:
-    - path: confusion_matrix.png
-      hash: md5
-      md5: d01d2f2068ec415de64721e71a9d7f7e
-      size: 21027
-    - path: metrics.json
-      hash: md5
-      md5: 14ee388926f59d4527c140b91810e01f
-      size: 170
-    - path: models/model.pkl
-      hash: md5
-      md5: 2945b47809bf0aa37772c62797496ea6
-      size: 11958377
-  optimize:
-    cmd: python src/train.py --hpo model=random_forest 
-      model_path=models/optimized_model.pkl
-    deps:
-    - path: conf/config.yaml
-      hash: md5
-      md5: 876f5ca15b67024f5b4c4d81b81682dd
-      size: 596
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
     - path: conf/model/random_forest.yaml
       hash: md5
       md5: f4353742c30e67a84efbb779a5e443c8
@@ -73,10 +39,44 @@ stages:
       nfiles: 4
     - path: src/train.py
       hash: md5
-      md5: 6ae294ebe6175782f9bf49b55a9593e7
-      size: 7077
+      md5: 12077710cc0a6730e10726a0c54f72d7
+      size: 6351
     outs:
-    - path: models/optimized_model.pkl
+    - path: confusion_matrix.png
+      hash: md5
+      md5: 00e5906da9e20df60a35d749859a5673
+      size: 19147
+    - path: metrics.json
+      hash: md5
+      md5: a25bc5112a80b362c4c564a47ee78508
+      size: 176
+    - path: model.pkl
+      hash: md5
+      md5: fbe0e7637310ad162fbe088de48ed9cb
+      size: 11959849
+  optimize:
+    cmd: python src/train.py --hpo model=random_forest 
+      model_path=optimized_model.pkl
+    deps:
+    - path: conf/config.yaml
+      hash: md5
+      md5: 07c2b579140d64317a7f630d96cd11ad
+      size: 589
+    - path: conf/model/random_forest.yaml
+      hash: md5
+      md5: f4353742c30e67a84efbb779a5e443c8
+      size: 92
+    - path: data/processed
+      hash: md5
+      md5: 7684a4003ce52916f43b8c4166400075.dir
+      size: 59361593
+      nfiles: 4
+    - path: src/train.py
+      hash: md5
+      md5: 12077710cc0a6730e10726a0c54f72d7
+      size: 6351
+    outs:
+    - path: optimized_model.pkl
       hash: md5
       md5: 2b93091184cfa5fa13e56d695b2bccfc
       size: 199370089

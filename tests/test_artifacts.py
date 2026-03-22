@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 import joblib
 
-MODEL_PATH = Path("models/model.pkl")
+MODEL_PATH = Path("model.pkl")
 METRICS_PATH = Path("metrics.json")
 CM_PATH = Path("confusion_matrix.png")
 

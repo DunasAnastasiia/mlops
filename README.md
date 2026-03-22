@@ -176,7 +176,7 @@ python src/prepare.py --input data/raw/weatherAUS.csv --output-dir data/processe
 
 **Train model:**
 ```bash
-python src/train.py --input-dir data/processed --model-path models/model.pkl --metrics-path metrics.json
+python src/train.py --input-dir data/processed --model-path model.pkl --metrics-path metrics.json
 ```
 
 ## Results
@@ -249,7 +249,7 @@ dvc remote add -d myremote s3://my-bucket/path
 
 ### Stage 2: Train
 - **Input**: Processed data (`data/processed/`)
-- **Output**: Model (`models/model.pkl`), Metrics (`metrics.json`)
+- **Output**: Model (`model.pkl`), Metrics (`metrics.json`)
 - **Parameters**: `model_type`, `n_estimators`, `max_depth`, `min_samples_split`
 - **Tasks**:
   - Load preprocessed data
