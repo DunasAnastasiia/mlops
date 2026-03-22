@@ -28,10 +28,15 @@ jobs:
       - name: Download Real Data
         run: |
           mkdir -p data/raw
-          curl -L https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv -o data/raw/weatherAUS.csv
-          if [ ! -s data/raw/weatherAUS.csv ] || [ $(stat -c%s data/raw/weatherAUS.csv) -lt 1000 ]; then
-            echo "Primary download failed, trying fallback source..."
-            curl -L https://raw.githubusercontent.com/sksharma001/ML-Project-Weather-Prediction-Using-Python/master/weatherAUS.csv -o data/raw/weatherAUS.csv
+          curl -fL https://raw.githubusercontent.com/sk-taneja/ML-Project-Rain-in-Australia/master/data/weatherAUS.csv -o data/raw/weatherAUS.csv || echo "Primary download failed"
+          if [ ! -s data/raw/weatherAUS.csv ] || [ $(stat -c%s data/raw/weatherAUS.csv) -lt 10000 ]; then
+            echo "Primary data invalid or too small, trying fallback source..."
+            curl -fL https://raw.githubusercontent.com/sksharma001/ML-Project-Weather-Prediction-Using-Python/master/weatherAUS.csv -o data/raw/weatherAUS.csv || echo "Fallback download failed"
+          fi
+          if [ ! -s data/raw/weatherAUS.csv ] || [ $(stat -c%s data/raw/weatherAUS.csv) -lt 10000 ]; then
+            echo "Data file is still missing or invalid!"
+            ls -lh data/raw/
+            exit 1
           fi
           
       - name: Data Preparation

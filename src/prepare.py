@@ -30,9 +30,19 @@ def load_data(data_path):
 def preprocess_data(df, target_column="RainTomorrow"):
     print("\nPreprocessing data...")
 
+    if df.empty:
+        raise ValueError("Dataset is empty")
+
+    if target_column not in df.columns:
+        raise ValueError(f"Column {target_column} not found in dataset. Available columns: {list(df.columns)}")
+
     data = df.copy()
 
     data = data.dropna(subset=[target_column])
+    
+    if data.empty:
+        raise ValueError("Dataset is empty after dropping missing target values")
+
     print(f"After dropping missing target: {data.shape[0]} rows")
 
     y = data[target_column].map({"Yes": 1, "No": 0})
