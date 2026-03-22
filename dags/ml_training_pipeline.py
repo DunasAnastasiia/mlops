@@ -1,3 +1,10 @@
+import importlib.util
+import json
+import os
+import shutil
+import site
+import subprocess
+import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -6,10 +13,6 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 
 
 def install_dependencies():
-    import subprocess
-    import sys
-    import site
-
     pkgs = {
         "dvc": "dvc",
         "sklearn": "scikit-learn",
@@ -38,9 +41,6 @@ def install_dependencies():
 
 
 def get_base_env():
-    import os
-    import site
-
     env = os.environ.copy()
     user_site = site.getusersitepackages()
     user_bin = os.path.join(os.path.expanduser("~"), ".local", "bin")
@@ -55,10 +55,6 @@ def get_base_env():
 
 
 def reset_mlflow_db(db_path, env):
-    import os
-    import subprocess
-    import sys
-
     try:
         check_cmd = [
             sys.executable,
@@ -74,11 +70,7 @@ def reset_mlflow_db(db_path, env):
 
 
 def prepare_mlflow_db(db_path):
-    import os
-
     if os.path.isdir(db_path):
-        import shutil
-
         try:
             shutil.rmtree(db_path)
         except OSError:
@@ -100,8 +92,6 @@ def prepare_mlflow_db(db_path):
 
 
 def prepare_mlruns(mlruns_dir):
-    import os
-
     if not os.path.exists(mlruns_dir):
         try:
             os.makedirs(mlruns_dir, mode=0o777, exist_ok=True)
@@ -115,9 +105,6 @@ def prepare_mlruns(mlruns_dir):
 
 
 def run_dvc_command(command):
-    import subprocess
-    import sys
-
     install_dependencies()
     env = get_base_env()
     db_path = "/opt/airflow/mlflow.db"
@@ -137,16 +124,12 @@ def run_dvc_command(command):
 
 
 def check_data_exists():
-    import os
-
     if not os.path.exists("/opt/airflow/data/raw/weatherAUS.csv"):
         raise RuntimeError("Data file not found")
     print("Data exists")
 
 
 def check_model_performance():
-    import json
-
     try:
         with open("/opt/airflow/metrics.json", "r", encoding="utf-8") as f:
             metrics = json.load(f)
@@ -159,11 +142,6 @@ def check_model_performance():
 
 
 def ensure_mlflow_installed():
-    import subprocess
-    import sys
-    import site
-    import importlib.util
-
     if importlib.util.find_spec("mlflow") is None:
         print("MLflow not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "mlflow", "scikit-learn", "--user"])
@@ -184,6 +162,7 @@ def get_best_run_id(client, experiment_name):
 
 
 def register_model_task():
+    # pylint: disable=import-outside-toplevel
     import mlflow
     from mlflow.tracking import MlflowClient
 
