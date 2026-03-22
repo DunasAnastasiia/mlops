@@ -8,3 +8,4 @@ models/
 mlruns/
 .trash/
 .idea
+logs/
